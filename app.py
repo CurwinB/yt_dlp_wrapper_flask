@@ -1,7 +1,6 @@
 
 import os
 from flask import Flask, request, render_template, jsonify, send_file
-import test
 import yt_dlp
 import sys
 print(sys.version_info)
