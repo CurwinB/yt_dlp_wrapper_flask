@@ -12,10 +12,12 @@ app = Flask(__name__)
 def download(vid, start_time, end_time):
   output_filename = vid+"_"+start_time+"_"+end_time
   video_url = "https://youtube.com/watch?v="+vid
+  start = int(start_time)
+  end = int(end_time)
   print(video_url)
   print(yt_dlp.version.__version__)
   params = {
-        'download_ranges': yt_dlp.utils.download_range_func([], [[start_time, end_time]]),
+        'download_ranges': yt_dlp.utils.download_range_func([], [[start, end]]),
         'match_filter': yt_dlp.utils.match_filter_func("!is_live & live_status!=is_upcoming & availability=public"),
         'no_warnings': True,
         'noprogress': True,
@@ -31,8 +33,4 @@ def download(vid, start_time, end_time):
 
 @app.route("/")
 def index():
-  return "Yes"
-
-
-if __name__ == '__main__':
-    app.run()
+  return "Yes."
