@@ -1,36 +1,42 @@
-
 import os
-from flask import Flask, request, render_template, jsonify, send_file
-import yt_dlp
 import sys
+from flask import Flask, request, send_file, jsonify
+import yt_dlp
+
 print(sys.version_info)
-print(yt_dlp.version.__version__)
+print(yt_dlp.__version__)
 
 app = Flask(__name__)
 
-@app.route("/download/<vid>/<start_time>/<end_time>")
-def download(vid, start_time, end_time):
-	start = int(float(start_time))
-	end = int(float(end_time))
-	output_filename = vid+"_"+str(start)+"_"+str(end)
-	matching_files = [x for x in os.listdir(".") if x.startswith(output_filename) and not x.endswith("part")]
-	if matching_files:
-		return send_file(matching_files[0])
-	[os.remove(x) for x in os.listdir(".") if not os.path.isdir(x) and x.count("_")]
-	video_url = "https://youtube.com/watch?v="+vid
-	params = {
-			'download_ranges': yt_dlp.utils.download_range_func([], [[start, end]]),
-			'match_filter': yt_dlp.utils.match_filter_func("!is_live & live_status!=is_upcoming & availability=public"),
-			'outtmpl': {'default': output_filename},
-		}
-	with yt_dlp.YoutubeDL(params) as ydl:
-		try:
-			ydl.download([video_url])
-		except yt_dlp.utils.DownloadError as e:
-			return str(e)
+@app.route("/download")
+def download():
+    url = request.args.get("url")
+    if not url:
+        return jsonify({"error": "Missing 'url' parameter"}), 400
 
-	return send_file([x for x in os.listdir(".") if x.startswith(output_filename)][0])
+    output_filename = "video_output.%(ext)s"
+
+    params = {
+        'outtmpl': output_filename,
+        'format': 'best',  # You can tweak this (e.g., 'bestvideo+bestaudio')
+        'noplaylist': True,
+        'quiet': True
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(params) as ydl:
+            ydl.download([url])
+    except yt_dlp.utils.DownloadError as e:
+        return jsonify({"error": str(e)}), 500
+
+    # Find the actual downloaded file name
+    downloaded_file = next((f for f in os.listdir(".") if f.startswith("video_output.")), None)
+    if not downloaded_file:
+        return jsonify({"error": "Video download failed"}), 500
+
+    return send_file(downloaded_file, as_attachment=True)
 
 @app.route("/")
 def index():
-	return "Yes."
+    return "Yes."
+
