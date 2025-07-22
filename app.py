@@ -4,7 +4,9 @@ from flask import Flask, request, send_file, jsonify
 import yt_dlp
 
 print(sys.version_info)
-print(yt_dlp.__version__)
+import importlib.metadata
+print(importlib.metadata.version("yt-dlp"))
+
 
 app = Flask(__name__)
 
