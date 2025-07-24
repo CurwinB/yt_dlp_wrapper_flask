@@ -23,8 +23,25 @@ def download_video():
             stderr=subprocess.PIPE,
             text=True
         )
+
         if result.returncode != 0:
             return jsonify({'error': result.stderr}), 500
-        return jsonify(json.loads(result.stdout))
+
+        info = json.loads(result.stdout)
+        hls_url = None
+
+        # Try to find the best HLS stream
+        for fmt in info.get('formats', []):
+            if fmt.get('ext') == 'mp4' and fmt.get('protocol') == 'm3u8_native':
+                hls_url = fmt.get('url')
+                break
+            elif fmt.get('protocol') == 'm3u8_native':
+                hls_url = fmt.get('url')  # fallback to any HLS if no MP4
+
+        if not hls_url:
+            return jsonify({'error': 'No HLS stream found'}), 404
+
+        return jsonify({'hls_url': hls_url})
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
