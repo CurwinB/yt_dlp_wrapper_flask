@@ -28,20 +28,32 @@ def download_video():
             return jsonify({'error': result.stderr}), 500
 
         info = json.loads(result.stdout)
-        hls_url = None
-
-        # Try to find the best HLS stream
+        
+        # Filter for HLS streams and sort by quality
+        hls_formats = []
         for fmt in info.get('formats', []):
-            if fmt.get('ext') == 'mp4' and fmt.get('protocol') == 'm3u8_native':
-                hls_url = fmt.get('url')
-                break
-            elif fmt.get('protocol') == 'm3u8_native':
-                hls_url = fmt.get('url')  # fallback to any HLS if no MP4
-
-        if not hls_url:
+            if fmt.get('protocol') == 'm3u8_native':
+                hls_formats.append(fmt)
+        
+        if not hls_formats:
             return jsonify({'error': 'No HLS stream found'}), 404
-
-        return jsonify({'hls_url': hls_url})
+        
+        # Sort by height (resolution) descending, then by tbr (total bitrate) descending
+        hls_formats.sort(key=lambda x: (
+            x.get('height', 0), 
+            x.get('tbr', 0)
+        ), reverse=True)
+        
+        # Get the best quality HLS stream
+        best_format = hls_formats[0]
+        hls_url = best_format.get('url')
+        
+        return jsonify({
+            'hls_url': hls_url,
+            'quality': f"{best_format.get('height', 'unknown')}p",
+            'bitrate': best_format.get('tbr', 'unknown')
+        })
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
